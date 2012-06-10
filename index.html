@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Pacman-js by MarcoSharper</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Pacman-js</h1>
+        <p>Pacman remake in JavaScript</p>
+        <p class="view"><a href="https://github.com/MarcoSharper/pacman-js">View the Project on GitHub <small>MarcoSharper/pacman-js</small></a></p>
+        <ul>
+          <li><a href="https://github.com/MarcoSharper/pacman-js/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/MarcoSharper/pacman-js/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/MarcoSharper/pacman-js">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>PacMan</h1>
+
+<p>Remake nejpopulárnější počítačové hry na světě do JavaScriptu. Využívá principy OOP za pomocí prototypové dědičnosti. Dodržuje originální pravidla a principy a z velké části kopíruje velmi propracovanou umělou inteligenci původní hry.</p>
+
+<h2>Vývoj</h2>
+
+<p>Základ hry je jako v každém jiném jazyce herní smyčka, která má 2 úkoly: </p>
+
+<ul>
+<li>vypočítat posuny postav, jejich kolize a stav hry (vítězství/prohra)</li>
+<li>a poté vykreslit scénu.</li>
+</ul><p>Četnost tohoto volání závisí na rychlosti hardwaru. Obvykle běží na cca. 60 FPS.</p>
+
+<h3>Maze</h3>
+
+<p>Hra začíná načtením a analýzou hracího bludiště. Pro paměťovou i implementační jednoduchost jsem zvolil dvourozměrné pole pro uložení bludiště. Každá dlaždice je definována jedním číslem, které je binární kombinací možného obsahu: </p>
+
+<pre><code>- stěna: 1
+- podlaha: 2
+- volné místo: 4
+- dům pro duchy: 8
+- jídlo pro Pacmana: 16
+- tunel: 32
+- dveře domu: 64
+</code></pre>
+
+<p>Typické hrací pole, kam může Pacman jít a je tam jídlo je tedy 18 (podlaha + jídlo). Pro pohyb Pacmana je potřeba znát, kde je stěna a kde je podlaha, ale už není potřeba vědět, zda je tam jídlo - to se řeší jinde. To lze velmi snadno zjišťovat díky binárním operacím nad číslem a je to velmi efektivní způsob.</p>
+
+<h3>Entity</h3>
+
+<p>Nejvíce se princip dědičnosti a polymorfismu využívá u všech pohyblivých objektů v bludišti (třída Entity - "stvoření"). Tato třída uchovává směr postavy, její rychlost a při každém průchodu herním cyklem jí posune a zatočí podle potřeby. Třída je abstraktní.</p>
+
+<h3>Ghost</h3>
+
+<p>Ghost je třída, která dědí od třídy Entity. Třída se stará o vykreslení a animaci ducha a o výpočet jeho zatáčení. To probíhá tak, že objekt má v sobě uložené souřadnice, kam se chce dostat a na každé křižovatce se vemou v potaz možné cesty z ní. Automaticky je vyloučena cesta zpět, protože to podle specifikace duchové nedělají. Ze zbylých možných výstupů se vypočte jejich euklidova vzdálenost k cíle a vybere se nejvýhodnější cesta. Pohyb touto cestou řeší zděděná třída Entity, takže o to už se nestaráme. Třída je opět abstraktní.</p>
+
+<h3>Blinky, Pinky, Inky &amp; Clyde</h3>
+
+<p>Konkrétní implementace ducha v bludišti. Určují barvu a hlavně zajišťují umělou inteligenci, kterou má každá postava jinou. Každá postava má svou rychlost a ta je ještě ovlivněna několika dalšími faktory hry. </p>
+
+<p>Inteligence je možná sofistikovaná, ale má velmi jednoduhou implementaci. Při vstupu na křižovatku cest se zjistí, v jakém módu hra je. </p>
+
+<ul>
+<li><p>V případě módu "scatter" má každá postava jako svůj cíl určenou svou souřadnici v rohu bludiště. Tím získáme rovnoměrně rozprostřené postavy, které každá ve svém rohu obíhají jeden blok.</p></li>
+<li>
+<p>Pokud je mód "chase", probíhá pronásledování Pacmana.</p>
+
+<ul>
+<li>Blinky má jako cíl souřadnice Pacmana. Prvoplánově ho sleduje. </li>
+<li>Pinky má jako cíl 4 políčka před Pacmanem po jeho směru. Tím se může dostat před něj a často se stává, že společně s Blinkym Pacmana obklíčí.</li>
+<li>Inkyho cíl je vždy dvojnásobek vektoru mezi Blinkym a Pacmanem. Čím je Blinky blíž k Pacmanovi, tím více je tam přitahován i Inky. </li>
+<li>Clyde se chová "stydlivě". Pokud je jeho euklidova vzdálenost od Pacmana méně, než 8, tak je jeho cílová souřadnice v jeho rohu bludiště. Jakmile se ale od Pacmana vzdálí na 8 polí, jeho cílem se hned stane sám Pacman a sleduje ho podobně jako Blinky, dokud se k němu opět nedostane blíž.</li>
+</ul>
+</li>
+</ul><p>Módy hry se přepínají podle daných vzorců z originální hry. Začíná se například 7 sekundami scatter módu a poté 20 sekundami chase módu. Ty se dále v přesných intervalech několikkrát střídají a poté hra zůstane běžet až do konce v chase módu.</p>
+
+<p>Hra ještě obsahuje konstantu "inteligence" postav. Tou se řídí to, v jakém poměru se v chase módu využije zatáčení podle umělé inteligence nebo náhodné zatáčení. V mé hře jsem ho určil na 7:3 pro chytré chování.</p>
+
+<h2>Resume</h2>
+
+<p>Nejtěžší je udělat "hloupou" umělou inteligenci. Postavy by mohly celou dobu sledovat Pacmana, ale hra by tím ztratila své kouzlo a byla pouze utíkáním před duchy. Nyní je to mnohem více. Pokud jste do hry pronikli, zjistíte, že ve hře není tím hlavním cílem ovládat Pacmana, ale spíše naučit se ovládat duchy, protože když znáte jejich chování, tak je můžete záměrně ovlivňovat k pro vás výhodnějším situacím.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/MarcoSharper">MarcoSharper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
